@@ -9,7 +9,7 @@ Currently, items on page 1 show under "Future", and items on any other page show
 Remaining page count and percentage progress increment in real-time while advancing pages in a Mokuro HTML file.
 
 ## Sample Bookshelf
-![](Sample%20Bookshelf.png)
+![](Sample%20Bookshelf%202.png)
 
 ## Dependencies
 
