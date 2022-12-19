@@ -127,10 +127,11 @@ for (let key of keys) {
 window.onstorage = event => {
 
   const progressBarElement = document.getElementById(event.key);
+  const mokuro = JSON.parse(event.newValue);
   const totalPages = mokuro.last_page_idx;
   const currentProgressElement = progressBarElement.getElementsByClassName('progress')[0];
   const remainingPagesElement = progressBarElement.getElementsByClassName('remaining')[0];
-  const currentPage = JSON.parse(event.newValue).page_idx;
+  const currentPage = mokuro.page_idx;
   currentProgressElement.innerText = parseInt(currentPage/totalPages*100);
   remainingPagesElement.innerText = totalPages - currentPage + 1;
 
