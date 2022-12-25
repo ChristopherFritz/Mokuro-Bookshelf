@@ -11,7 +11,7 @@ div.section {
   gap: 5px;
 }
 
-div.box { text-align: center; }
+div.box { text-align: center; position: relative; }
 
 div.images { border: solid thin black; }
 
@@ -65,12 +65,37 @@ img { height: 180px; }
   left: 0;
 }
 
+.delete {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: none;
+}
+
+.delete:hover {
+  cursor: pointer;
+}
+
 /* If Migaku is enabled, hide the toolbar on this page. */
 #migaku-toolbar-minimized { display: none !important;  }
 </style>
 
 <script>
-function reading(mokuro, series, html) {
+function determineProgressStatus(currentPage, totalPages) {
+
+  if (1 === currentPage)  {
+    return 'future';
+  }
+  else if (currentPage === totalPages) {
+    return 'finished';
+  }
+  else {
+    return 'reading';
+  }
+
+}
+
+function displayBook(mokuro, series, html) {
 
   const mokuroKey = `mokuro_${encodeURI(html)}`;
   const currentPage = mokuro.page_idx + 1;
@@ -84,33 +109,61 @@ function reading(mokuro, series, html) {
   const image = `${html.replace('.html', '')}/${mokuro.cover_page}`;
   const remainingPages = totalPages - currentPage;
 
-  let progressStatus = 'reading';
-  if (1 === currentPage)  {
-    progressStatus = 'future';
-  }
-  else if (currentPage === totalPages) {
-    progressStatus = 'finished';
-  }
+  const progressStatus = determineProgressStatus(currentPage, totalPages)
 
-  let element = document.createElement('template');
-  element.innerHTML = `
-<div class="box" data-title="${volumeTitle}" data-current-page="${currentPage}" data-total-pages="${totalPages}" data-remaining-pages="${remainingPages}" data-progress-status="${progressStatus}" data-percent-complete="${percentComplete}" data-percent-remaining="${percentRemaining}" id="${mokuroKey}">
+  // Container for a single volume and its progress.
+  const boxElement = document.createElement('div');
+  boxElement.id = mokuroKey;
+  boxElement.classList.add('box');
+  boxElement.dataset.title = volumeTitle;
+  boxElement.dataset.currentPage = currentPage;
+  boxElement.dataset.totalPages = totalPages;
+  boxElement.dataset.remainingPages = remainingPages;
+  boxElement.dataset.progressStatus = progressStatus;
+  boxElement.dataset.percentComplete = percentComplete;
+  boxElement.dataset.percentRemaining= percentRemaining;
 
-<div class="imagebox">
-<a href="${html}"></a>
-<img src="${image}">
-<div class="pending" style="width: ${percentRemaining}%;"></div>
-</div>
+  // Container for the volume cover image and a link to the Mokuro HTML file.
+  const imageBoxElement = document.createElement('div');
+  imageBoxElement.classList.add('imagebox');
+  // Link to the Mokuro HTML file.  This cannot contain the image or else the CSS box model seems to change.
+  const imageBoxLinkElement = document.createElement('a');
+  imageBoxLinkElement.href = html;
+  imageBoxElement.appendChild(imageBoxLinkElement);
+  // Image of the volume cover.
+  const imageBoxImageElement = document.createElement('img');
+  imageBoxImageElement.src = image;
+  imageBoxElement.appendChild(imageBoxImageElement);
+  // A white block with opacity set to make part of the volume cover image appear transparent based on one's reading progress.
+  const pendingBoxElement = document.createElement('div');
+  pendingBoxElement.classList.add('pending');
+  pendingBoxElement.style.width = `${percentRemaining}%`;
+  imageBoxElement.appendChild(pendingBoxElement);
+  boxElement.appendChild(imageBoxElement);
 
-<div class="progress-bar">
-<div class="progress-bar-percentage" style="width: ${percentComplete}%;">
-<span><span class="progress">${percentComplete}</span>% (<span class="remaining">${remainingPages}</span>p)</span>
-<span style="position: absolute; top: 0; right: 0; display: none;" onclick="deleteFromMokuro('${mokuroKey}')">❌</span>
-</div>
-`.trim();
+  // Container for the progress bar.
+  const progressBarElement = document.createElement('div');
+  progressBarElement.classList.add('progress-bar');
+  // Progress bar.
+  const progressBarPercentageElement = document.createElement('div');
+  progressBarPercentageElement.classList.add('progress-bar-percentage');
+  progressBarPercentageElement.style.width = `${percentComplete}%`;
+  // Outer span for centering progress text.
+  const progressBarTextContainerElement = document.createElement('span');
+  progressBarTextContainerElement.innerHTML = `<span class="progress">${percentComplete}</span>% (<span class="remaining">${remainingPages}</span>p)`
+  progressBarPercentageElement.appendChild(progressBarTextContainerElement);
+  progressBarElement.appendChild(progressBarPercentageElement);
+  boxElement.appendChild(progressBarElement);
+
+  // Delete icon.
+  const deleteVolumeElement = document.createElement('span');
+  deleteVolumeElement.classList.add('delete');
+  deleteVolumeElement.addEventListener('click', deleteFromMokuro);
+  deleteVolumeElement.innerText = '❌';
+  progressBarElement.appendChild(deleteVolumeElement);
 
   const containerElement = document.getElementById(progressStatus);
-  containerElement.appendChild(element.content.firstChild);
+  containerElement.appendChild(boxElement);
 
 }
 
@@ -169,14 +222,28 @@ window.onstorage = event => {
   const progressBarElement = boxElement.getElementsByClassName('progress-bar-percentage')[0];
   progressBarElement.style.width = percentComplete + '%';
 
+  // TODO: Need to move the book from one section to another and re-sort both sections, if applicable.
+  const oldProgressStatus = boxElement.dataset.progressStatus;
+  const newProgressStatus = determineProgressStatus(currentPage, totalPages);
+  console.log(`${oldProgressStatus} VS ${newProgressStatus}`)
+  if (oldProgressStatus !== newProgressStatus) {
+    boxElement.dataset.progressStatus = newProgressStatus;
+    const newContainerElement = document.getElementById(newProgressStatus);
+    newContainerElement.appendChild(boxElement);
+    sortSection(newProgressStatus, 'title');
+  }
+
+
 };
 
 
-function deleteFromMokuro(key) {
+function deleteFromMokuro() {
   // TODO: Show the correct pointer on hover for the ❌.
   // TODO: Have a confirmation dialogue.
   // TODO: Remove element from screen.
-  localStorage.removeItem(key);
+  const volumeToRemove = event.srcElement.parentElement.parentElement;//.parentElement;
+  volumeToRemove.remove();
+  //localStorage.removeItem(volumeToRemove.id);
 }
 
 </script>
@@ -216,7 +283,7 @@ for (let key of keys) {
   const image = `${path.replace('.html', '')}/${mokuro.cover_page}`;
 
 
-  reading(mokuro, fileName, path);
+  displayBook(mokuro, fileName, path);
 
 }
 
