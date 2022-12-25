@@ -94,7 +94,7 @@ function reading(mokuro, series, html) {
 
   let element = document.createElement('template');
   element.innerHTML = `
-<div class="box" data-title="${volumeTitle}" data-current-page="${currentPage}" data-total-pages="${totalPages}" data-remaining-pages="${remainingPages}" data-progress-status="${progressStatus}" data-percent-complete="${percentComplete}" data-percent-remaining="${percentRemaining}">
+<div class="box" data-title="${volumeTitle}" data-current-page="${currentPage}" data-total-pages="${totalPages}" data-remaining-pages="${remainingPages}" data-progress-status="${progressStatus}" data-percent-complete="${percentComplete}" data-percent-remaining="${percentRemaining}" id="${mokuroKey}">
 
 <div class="imagebox">
 <a href="${html}"></a>
@@ -103,7 +103,7 @@ function reading(mokuro, series, html) {
 </div>
 
 <div class="progress-bar">
-<div class="progress-bar-percentage" style="width: ${percentComplete}%; " id="${mokuroKey}">
+<div class="progress-bar-percentage" style="width: ${percentComplete}%;">
 <span><span class="progress">${percentComplete}</span>% (<span class="remaining">${remainingPages}</span>p)</span>
 <span style="position: absolute; top: 0; right: 0; display: none;" onclick="deleteFromMokuro('${mokuroKey}')">❌</span>
 </div>
@@ -147,14 +147,27 @@ function sortSection(sectionName, sortBy) {
 
 window.onstorage = event => {
 
-  const progressBarElement = document.getElementById(event.key);
+  const boxElement = document.getElementById(event.key);
   const mokuro = JSON.parse(event.newValue);
   const totalPages = mokuro.last_page_idx;
-  const currentProgressElement = progressBarElement.getElementsByClassName('progress')[0];
-  const remainingPagesElement = progressBarElement.getElementsByClassName('remaining')[0];
+
   const currentPage = mokuro.page_idx;
+  const remainingPages = totalPages - currentPage + 1;
+
+  const percentComplete = parseInt(currentPage/totalPages*100);
+  const percentRemaining = 100 - percentComplete;
+
+  const currentProgressElement = boxElement.getElementsByClassName('progress')[0];
   currentProgressElement.innerText = parseInt(currentPage/totalPages*100);
-  remainingPagesElement.innerText = totalPages - currentPage + 1;
+
+  const remainingPagesElement = boxElement.getElementsByClassName('remaining')[0];
+  remainingPagesElement.innerText = remainingPages;
+
+  const pendingElement = boxElement.getElementsByClassName('pending')[0];
+  pendingElement.style.width = percentRemaining + '%';
+
+  const progressBarElement = boxElement.getElementsByClassName('progress-bar-percentage')[0];
+  progressBarElement.style.width = percentComplete + '%';
 
 };
 
