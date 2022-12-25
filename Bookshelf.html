@@ -82,7 +82,7 @@ function reading(mokuro, series, html) {
   const volumeTitle = html.split('/').pop().replace('.html', '');
 
   const image = `${html.replace('.html', '')}/${mokuro.cover_page}`;
-  const remainingPages = totalPages-currentPage;
+  const remainingPages = totalPages - currentPage;
 
   let progressStatus = 'reading';
   if (1 === currentPage)  {
@@ -152,7 +152,7 @@ window.onstorage = event => {
   const totalPages = mokuro.last_page_idx;
 
   const currentPage = mokuro.page_idx + 1;
-  const remainingPages = totalPages - currentPage + 1;
+  const remainingPages = totalPages - currentPage;
 
   const percentComplete = parseInt(currentPage/totalPages*100);
   const percentRemaining = 100 - percentComplete;
