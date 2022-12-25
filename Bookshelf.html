@@ -5,10 +5,6 @@
 <meta charset="utf-8"/>
 
 <style>
-#reading img:nth-child(2) {opacity:0.25;}
-#reading img:first-child,
-#future img:first-child {position:absolute;}
-
 div.section {
   display: flex;
   flex-wrap: wrap;
@@ -17,31 +13,56 @@ div.section {
 
 div.box { text-align: center; }
 
-div.images { border: solid thin black; margin-bottom: 3px; }
+div.images { border: solid thin black; }
 
-div.box { font-size: 12px; }
+div.imagebox {
+  position: relative;
+  border: solid thin black;
+  line-height: 0;
+}
+
+div.imagebox a {
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  position: absolute;
+}
+
+div.pending {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background-color: white;
+  opacity: 0.75;
+}
 
 img { height: 180px; }
 
 .progress-bar {
-    background-color: #EEE;
-    position: relative;
-    border: solid thin black;
+  background-color: #EEE;
+  position: relative;
+  border: solid thin black;
+  margin-top: 3px;
+  font-size: 12px;
 }
 
+
 .progress-bar-percentage {
-    background-color: #000;
-    padding: 5px 0px;
-    color: #000;
-    text-align: center;
-    height: 1em;
+  background-color: #8BD;
+  padding: 5px 0px;
+  color: #000;
+  text-align: center;
+  height: 1em;
 }
 
 .progress-bar-percentage > span {
-    display: inline-block;
-    position: absolute;
-    width: 100%;
-    left: 0;
+  display: inline-block;
+  position: absolute;
+  width: 100%;
+  left: 0;
 }
 
 /* If Migaku is enabled, hide the toolbar on this page. */
@@ -49,41 +70,102 @@ img { height: 180px; }
 </style>
 
 <script>
-var remaining = 0;
 function reading(mokuro, series, html) {
 
   const mokuroKey = `mokuro_${encodeURI(html)}`;
   const currentPage = mokuro.page_idx + 1;
   const totalPages = mokuro.last_page_idx;
 
-  const progress = parseInt(currentPage/totalPages*100);
-  if (1 !== currentPage) {
-    remaining += totalPages;
-    remaining -= currentPage;
-  }
+  const percentComplete = parseInt(currentPage/totalPages*100);
+  const percentRemaining = 100 - percentComplete;
+
+  const volumeTitle = html.split('/').pop().replace('.html', '');
 
   const image = `${html.replace('.html', '')}/${mokuro.cover_page}`;
+  const remainingPages = totalPages-currentPage;
 
-    let element = document.createElement('template');
-    element.innerHTML = `
-<div class="box">
-<div class="images">
-<a href="${html}"><img src="${image}" style="clip-path: inset(0 ${100-progress}% 0 0);"/><img src="${image}"/></a>
+  let progressStatus = 'reading';
+  if (1 === currentPage)  {
+    progressStatus = 'future';
+  }
+  else if (currentPage === totalPages) {
+    progressStatus = 'finished';
+  }
+
+  let element = document.createElement('template');
+  element.innerHTML = `
+<div class="box" data-title="${volumeTitle}" data-current-page="${currentPage}" data-total-pages="${totalPages}" data-remaining-pages="${remainingPages}" data-progress-status="${progressStatus}" data-percent-complete="${percentComplete}" data-percent-remaining="${percentRemaining}">
+
+<div class="imagebox">
+<a href="${html}"></a>
+<img src="${image}">
+<div class="pending" style="width: ${percentRemaining}%;"></div>
 </div>
-<div class="progress-bar all-rounded">
-<div class="progress-bar-percentage all-rounded" style="width: ${progress}%; background-color: #8BD;" id="${mokuroKey}">
-<span><span class="progress">${progress}</span>% (<span class="remaining">${totalPages-currentPage}</span>p)</span>
-</div>
-<!--<span style="position: absolute; top: 0; right: 0;" onclick="deleteFromMokuro('${mokuroKey}')">❌</span>-->
-</div>
+
+<div class="progress-bar">
+<div class="progress-bar-percentage" style="width: ${percentComplete}%; " id="${mokuroKey}">
+<span><span class="progress">${percentComplete}</span>% (<span class="remaining">${remainingPages}</span>p)</span>
+<span style="position: absolute; top: 0; right: 0; display: none;" onclick="deleteFromMokuro('${mokuroKey}')">❌</span>
 </div>
 `.trim();
 
-  const containerID = (1 === currentPage) ? 'future' : 'reading';
-  const containerElement = document.getElementById(containerID);
+  const containerElement = document.getElementById(progressStatus);
   containerElement.appendChild(element.content.firstChild);
 
 }
+
+function sortSection(sectionName, sortBy) {
+
+  // Do nothing if section name is unknown.
+  switch (sectionName) {
+    case 'reading':
+      break;
+    case 'future':
+      break;
+    case 'finished':
+      break;
+    default:
+      return;
+  }
+
+  const container = document.querySelector(`#${sectionName}`);
+  const matches = container.querySelectorAll("[data-title]");
+
+  var matchesArray = Array.from(matches);
+  let sorted = matchesArray;
+
+  switch (sortBy) {
+    case 'title':
+      sorted = matchesArray.sort((a, b) => a.dataset.title.localeCompare(b.dataset.title));
+      break;
+    default:
+      return
+  }
+  sorted.forEach(e => document.querySelector(`#${sectionName}`).appendChild(e));
+
+}
+
+window.onstorage = event => {
+
+  const progressBarElement = document.getElementById(event.key);
+  const mokuro = JSON.parse(event.newValue);
+  const totalPages = mokuro.last_page_idx;
+  const currentProgressElement = progressBarElement.getElementsByClassName('progress')[0];
+  const remainingPagesElement = progressBarElement.getElementsByClassName('remaining')[0];
+  const currentPage = mokuro.page_idx;
+  currentProgressElement.innerText = parseInt(currentPage/totalPages*100);
+  remainingPagesElement.innerText = totalPages - currentPage + 1;
+
+};
+
+
+function deleteFromMokuro(key) {
+  // TODO: Show the correct pointer on hover for the ❌.
+  // TODO: Have a confirmation dialogue.
+  // TODO: Remove element from screen.
+  localStorage.removeItem(key);
+}
+
 </script>
 
 </head>
@@ -94,13 +176,15 @@ function reading(mokuro, series, html) {
 
 <div id="reading" class="section"></div>
 
-<div id="goal"></div>
-
 <h2>Future</h2>
 
 <div id="future" class="section"></div>
 
-<script type='text/javascript'>
+<h2>Finished</h2>
+
+<div id="finished" class="section"></div>
+
+<script>
 const keys = Object.keys(localStorage)
 const storagePrefix = "mokuro_"
 
@@ -118,30 +202,15 @@ for (let key of keys) {
 
   const image = `${path.replace('.html', '')}/${mokuro.cover_page}`;
 
+
   reading(mokuro, fileName, path);
 
 }
 
-window.onstorage = event => {
-
-  const progressBarElement = document.getElementById(event.key);
-  const mokuro = JSON.parse(event.newValue);
-  const totalPages = mokuro.last_page_idx;
-  const currentProgressElement = progressBarElement.getElementsByClassName('progress')[0];
-  const remainingPagesElement = progressBarElement.getElementsByClassName('remaining')[0];
-  const currentPage = mokuro.page_idx;
-  currentProgressElement.innerText = parseInt(currentPage/totalPages*100);
-  remainingPagesElement.innerText = totalPages - currentPage + 1;
-
-};
-
-function deleteFromMokuro(key) {
-  // TODO: Show the correct pointer on hover for the ❌.
-  // TODO: Have a confirmation dialogue.
-  // TODO: Remove element from screen.
-  localStorage.removeItem(key);
-}
-
+// Sort sections by title.
+sortSection('reading', 'title');
+sortSection('future', 'title');
+sortSection('finished', 'title');
 </script>
 
 </body>
