@@ -13,4 +13,4 @@ Remaining page count and percentage progress increment in real-time while advanc
 
 ## Dependencies
 
-Relies generating Mokuro HTML files using my [Mokuro fork](https://github.com/ChristopherFritz/mokuro), which adds extra information (page count and path to cover image) to the local storage.
+Relies on Mokuro HTML files generating using my [Mokuro fork](https://github.com/ChristopherFritz/mokuro), which adds extra information (page count and path to cover image) to the local storage.
