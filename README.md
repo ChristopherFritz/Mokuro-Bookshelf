@@ -2,9 +2,9 @@
 
 Web page for tracking progress in reading manga via Mokuro.
 
-All Mokuro HTML files that have been opened appear on the page.
+All Mokuro HTML files that have been opened in the browser appear on the page.
 
-Currently, items on page 1 show under "Future", and items on any other page show under "Reading".
+Items on page 1 show under "Future".  Items on the final page show under "Finished".  All other items show under "Reading".
 
 Remaining page count and percentage progress increment in real-time while advancing pages in a Mokuro HTML file.
 
