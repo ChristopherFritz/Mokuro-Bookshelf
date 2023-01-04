@@ -14,3 +14,9 @@ Remaining page count and percentage progress increment in real-time while advanc
 ## Dependencies
 
 Relies on Mokuro HTML files generated using my [Mokuro fork](https://github.com/ChristopherFritz/mokuro), which adds extra information (page count and path to cover image) to the local storage.
+
+## Browser Support
+
+This has been developed and texted on Chromium on Linux.
+
+Firefox does not appear to allow local storage to be visible across different file: documents, which prevents the bookshelf from being able to see Mokuro information.
