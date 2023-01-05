@@ -19,6 +19,8 @@ div.imagebox {
   position: relative;
   border: solid thin black;
   line-height: 0;
+  width: 125px;
+  height: 180px;
 }
 
 div.imagebox a {
@@ -26,8 +28,9 @@ div.imagebox a {
   height: 100%;
   top: 0;
   left: 0;
-  z-index: 1;
   position: absolute;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 div.pending {
@@ -37,32 +40,7 @@ div.pending {
   bottom: 0;
   background-color: white;
   opacity: 0.55;
-}
-
-img { height: 180px; }
-
-.progress-bar {
-  background-color: #EEE;
-  position: relative;
-  border: solid thin black;
-  margin-top: 3px;
-  font-size: 12px;
-}
-
-
-.progress-bar-percentage {
-  background-color: #8BD;
-  padding: 5px 0px;
-  color: #000;
-  text-align: center;
-  height: 1em;
-}
-
-.progress-bar-percentage > span {
-  display: inline-block;
-  position: absolute;
-  width: 100%;
-  left: 0;
+  pointer-events: none;
 }
 
 .delete {
@@ -78,9 +56,52 @@ img { height: 180px; }
 
 /* If Migaku is enabled, hide the toolbar on this page. */
 #migaku-toolbar-minimized { display: none !important;  }
+
 </style>
 
 <script>
+
+class ProgressBar extends HTMLElement {
+  static get observedAttributes() {
+    return ['progress', 'remaining']
+  }
+
+  constructor() {
+    super();
+    this.attachShadow({mode: 'open'});
+    this.shadowRoot.appendChild(document.getElementById('progress-bar-template').content.cloneNode(true));
+  }
+
+  get progress() {
+    return this.shadowRoot.querySelector('.progress').textContent;
+  }
+  set progress(value) {
+    this.shadowRoot.querySelector('.progress').textContent = value;
+    this.shadowRoot.querySelector('.progress-bar-percentage').style.width = `${value}%`;
+  }
+
+  get remaining() {
+    return this.shadowRoot.querySelector('.remaining').textContent;
+  }
+  set remaining(value) {
+    this.shadowRoot.querySelector('.remaining').textContent = value;
+  }
+
+  attributeChangedCallback(name, oldValue, newValue) {
+    switch(name) {
+      case 'progress':
+        this.progress = newValue;
+        break;
+      case 'remaining':
+        this.remaining = newValue;
+        break;
+    }
+  }
+
+}
+
+window.customElements.define('progress-bar', ProgressBar);
+
 function determineProgressStatus(currentPage, totalPages) {
 
   if (1 === currentPage)  {
@@ -127,26 +148,16 @@ function displayBook(mokuro, series, html) {
   const imageBoxElement = boxElement.getElementsByClassName('imagebox')[0];
   // Link to the Mokuro HTML file.  This cannot contain the image or else the CSS box model seems to change.
   imageBoxElement.getElementsByTagName('a')[0].href = html;
-  // Image of the volume cover.
-  imageBoxElement.getElementsByTagName('img')[0].src = image;
+  imageBoxElement.getElementsByTagName('a')[0].style.backgroundImage = `url("${image}")`;
+
   // A white block with opacity set to make part of the volume cover image appear transparent based on one's reading progress.
   imageBoxElement.getElementsByClassName('pending')[0].style.width = `${percentRemaining}%`;
 
   // Container for the progress bar.
-  const progressBarElement = boxElement.getElementsByClassName('progress-bar')[0];
-  // Progress bar.
-  progressBarElement.getElementsByClassName('progress-bar-percentage')[0].style.width = `${percentComplete}%`;
-  // Outer span for centering progress text.
-  progressBarElement.getElementsByClassName('progress')[0].innerText = percentComplete;
-  progressBarElement.getElementsByClassName('remaining')[0].innerText = remainingPages;
-  boxElement.appendChild(progressBarElement);
 
-  // Delete icon.
-  const deleteVolumeElement = document.createElement('span');
-  deleteVolumeElement.classList.add('delete');
-  deleteVolumeElement.addEventListener('click', deleteFromMokuro);
-  deleteVolumeElement.innerText = '❌';
-  progressBarElement.appendChild(deleteVolumeElement);
+  const progressBarElement = boxElement.querySelector('progress-bar');
+  progressBarElement.setAttribute('progress', percentComplete);
+  progressBarElement.setAttribute('remaining', remainingPages);
 
   const containerElement = document.getElementById(progressStatus);
   containerElement.appendChild(boxElement);
@@ -196,17 +207,9 @@ window.onstorage = event => {
   const percentComplete = parseInt(currentPage/totalPages*100);
   const percentRemaining = 100 - percentComplete;
 
-  const currentProgressElement = boxElement.getElementsByClassName('progress')[0];
-  currentProgressElement.innerText = parseInt(currentPage/totalPages*100);
-
-  const remainingPagesElement = boxElement.getElementsByClassName('remaining')[0];
-  remainingPagesElement.innerText = remainingPages;
-
-  const pendingElement = boxElement.getElementsByClassName('pending')[0];
-  pendingElement.style.width = percentRemaining + '%';
-
-  const progressBarElement = boxElement.getElementsByClassName('progress-bar-percentage')[0];
-  progressBarElement.style.width = percentComplete + '%';
+  const progressBarElement = boxElement.querySelector('progress-bar');
+  progressBarElement.progress = parseInt(currentPage/totalPages*100);
+  progressBarElement.remaining = remainingPages;
 
   const oldProgressStatus = boxElement.dataset.progressStatus;
   const newProgressStatus = determineProgressStatus(currentPage, totalPages);
@@ -216,7 +219,6 @@ window.onstorage = event => {
     newContainerElement.appendChild(boxElement);
     sortSection(newProgressStatus, 'title');
   }
-
 
 };
 
@@ -241,17 +243,47 @@ function deleteFromMokuro() {
 
 <div class="imagebox">
 <a href=""></a>
-<img src="">
 <div class="pending"></div>
 </div>
+
+<progress-bar></progress-bar>
+
+<span class="delete" onclick="deleteFromMokuro()">❌</span>
+
+</div>
+</template>
+
+<template id="progress-bar-template">
+<style>
+
+.progress-bar {
+  background-color: #EEE;
+  position: relative;
+  border: solid thin black;
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.progress-bar-percentage {
+  background-color: #8BD;
+  padding: 5px 0px;
+  color: #000;
+  text-align: center;
+  height: 1em;
+}
+
+.progress-bar-percentage > span {
+  display: inline-block;
+  position: absolute;
+  width: 100%;
+  left: 0;
+}
+</style>
 
 <div class="progress-bar">
 <div class="progress-bar-percentage">
 <span class="progress-text"><span class="progress"></span>% (<span class="remaining"></span>p)</span>
 </div>
-<span class="delete">❌</span>
-</div>
-
 </div>
 </template>
 
